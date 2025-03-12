@@ -5,7 +5,7 @@ class StrokeText extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ['text', 'stroke-color', 'font-family', 'font-size'];
+    return ['text', 'stroke-color', 'background-color', 'font-family', 'font-size'];
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -20,8 +20,9 @@ class StrokeText extends HTMLElement {
 
   render() {
     // Get attribute values with fallbacks
-    const text = this.getAttribute('text') || 'WELCOME'; // New default text
+    const text = this.getAttribute('text') || 'WELCOME';
     const strokeColor = this.getAttribute('stroke-color') || '#FFFFFF';
+    const backgroundColor = this.getAttribute('background-color') || 'radial-gradient(#1A1A1A, #333333)'; // Default dark gradient
     const fontFamily = this.getAttribute('font-family') || 'Poppins';
     const fontSize = this.getAttribute('font-size') || '10'; // In vw
 
@@ -32,12 +33,11 @@ class StrokeText extends HTMLElement {
     const textWidth = ctx.measureText(text).width;
 
     // Define SVG dimensions based on text width
-    const svgWidth = textWidth + 50; // Add padding for red dot
+    const svgWidth = textWidth + 20; // Reduced padding since no red dot
     const svgHeight = parseFloat(fontSize) * 20; // Approximate height based on font size
 
-    // Create a path for the text (this requires a trick since SVG doesn’t directly stroke text)
-    // We’ll use a simplified stroke animation on a single path
-    const pathLength = textWidth * 1.2; // Approximate path length for animation
+    // Approximate path length for animation
+    const pathLength = textWidth * 1.2;
 
     // Inject HTML and CSS into shadow DOM
     this.shadowRoot.innerHTML = `
@@ -49,7 +49,7 @@ class StrokeText extends HTMLElement {
           display: flex;
           justify-content: center;
           align-items: center;
-          background: radial-gradient(#1A1A1A, #333333);
+          background: ${backgroundColor};
           overflow: hidden;
         }
 
@@ -71,26 +71,14 @@ class StrokeText extends HTMLElement {
           animation: stroke-draw 5s ease forwards;
         }
 
-        .red-dot {
-          stroke-width: 20px;
-          stroke-linecap: round;
-          animation: red-dot-grow 2s ease-out forwards 4s; /* Delay to sync with text */
-        }
-
         @keyframes stroke-draw {
           0% { stroke-dashoffset: ${pathLength}px; }
           80% { stroke-dashoffset: 0px; }
           100% { stroke-dashoffset: 0px; }
         }
-
-        @keyframes red-dot-grow {
-          0% { stroke-width: 0px; }
-          100% { stroke-width: 20px; }
-        }
       </style>
       <svg class="stroke-container" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
         <text x="10" y="${svgHeight / 2}" dy=".35em" class="stroke-text">${text}</text>
-        <line x1="${svgWidth - 20}" y1="${svgHeight / 2}" x2="${svgWidth - 20}" y2="${svgHeight / 2}" stroke="#FF5851" class="red-dot" />
       </svg>
     `;
   }
