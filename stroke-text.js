@@ -30,15 +30,14 @@ class StrokeText extends HTMLElement {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     ctx.font = `${fontSize}vw ${fontFamily}, sans-serif`;
-    const textWidth = ctx.measureText(text).width;
 
     // Define SVG dimensions
-    const svgWidth = 800; // Fixed width to allow wrapping within bounds
-    const svgHeight = parseFloat(fontSize) * 40; // Increased height to accommodate wrapped lines
+    const svgWidth = 800; // Fixed width for wrapping
+    const svgHeight = parseFloat(fontSize) * 40; // Height to accommodate wrapped lines
 
-    // Split text into words for wrapping
+    // Split text into lines for wrapping
     const words = text.split(' ');
-    const lineHeight = parseFloat(fontSize) * 1.2; // Approximate line height in vw
+    const lineHeight = parseFloat(fontSize) * 1.2; // Line height in vw
     let lines = [];
     let currentLine = '';
     let currentWidth = 0;
@@ -88,13 +87,15 @@ class StrokeText extends HTMLElement {
           fill: none;
           stroke: ${strokeColor};
           stroke-width: 4px;
+          stroke-dasharray: 100%;
+          stroke-dashoffset: 100%;
           animation: stroke-draw 5s ease forwards;
         }
 
         @keyframes stroke-draw {
-          0% { stroke-dashoffset: 100%; }
-          80% { stroke-dashoffset: 0%; }
-          100% { stroke-dashoffset: 0%; }
+          to {
+            stroke-dashoffset: 0%;
+          }
         }
       </style>
       <svg class="stroke-container" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
@@ -102,12 +103,18 @@ class StrokeText extends HTMLElement {
       </svg>
     `;
 
-    // Dynamically set stroke-dash properties after rendering
-    const textNodes = this.shadowRoot.querySelectorAll('.stroke-text');
-    textNodes.forEach(textNode => {
-      const length = textNode.getComputedTextLength();
-      textNode.style.strokeDasharray = `${length}px`;
-      textNode.style.strokeDashoffset = `${length}px`;
+    // Ensure animation applies correctly after DOM insertion
+    requestAnimationFrame(() => {
+      const textNodes = this.shadowRoot.querySelectorAll('.stroke-text');
+      textNodes.forEach(textNode => {
+        const length = textNode.getComputedTextLength();
+        textNode.style.strokeDasharray = `${length}px`;
+        textNode.style.strokeDashoffset = `${length}px`;
+        // Force reflow to restart animation
+        textNode.getBoundingClientRect();
+        textNode.style.animation = 'none';
+        textNode.style.animation = 'stroke-draw 5s ease forwards';
+      });
     });
   }
 }
