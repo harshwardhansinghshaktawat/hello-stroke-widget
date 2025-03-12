@@ -22,7 +22,7 @@ class StrokeText extends HTMLElement {
     // Get attribute values with fallbacks
     const text = this.getAttribute('text') || 'WELCOME';
     const strokeColor = this.getAttribute('stroke-color') || '#FFFFFF';
-    const backgroundColor = this.getAttribute('background-color') || 'radial-gradient(#1A1A1A, #333333)'; // Default dark gradient
+    const backgroundColor = this.getAttribute('background-color') || 'radial-gradient(#1A1A1A, #333333)';
     const fontFamily = this.getAttribute('font-family') || 'Poppins';
     const fontSize = this.getAttribute('font-size') || '10'; // In vw
 
@@ -32,12 +32,34 @@ class StrokeText extends HTMLElement {
     ctx.font = `${fontSize}vw ${fontFamily}, sans-serif`;
     const textWidth = ctx.measureText(text).width;
 
-    // Define SVG dimensions based on text width
-    const svgWidth = textWidth + 20; // Reduced padding since no red dot
-    const svgHeight = parseFloat(fontSize) * 20; // Approximate height based on font size
+    // Define SVG dimensions
+    const svgWidth = 800; // Fixed width to allow wrapping within bounds
+    const svgHeight = parseFloat(fontSize) * 40; // Increased height to accommodate wrapped lines
 
-    // Approximate path length for animation
-    const pathLength = textWidth * 1.2;
+    // Split text into words for wrapping
+    const words = text.split(' ');
+    const lineHeight = parseFloat(fontSize) * 1.2; // Approximate line height in vw
+    let lines = [];
+    let currentLine = '';
+    let currentWidth = 0;
+
+    words.forEach(word => {
+      const wordWidth = ctx.measureText(word + ' ').width;
+      if (currentWidth + wordWidth > svgWidth - 20) { // 20px padding
+        lines.push(currentLine.trim());
+        currentLine = word + ' ';
+        currentWidth = wordWidth;
+      } else {
+        currentLine += word + ' ';
+        currentWidth += wordWidth;
+      }
+    });
+    if (currentLine) lines.push(currentLine.trim());
+
+    // Generate SVG text elements for each line
+    const textElements = lines.map((line, index) => `
+      <text x="10" y="${svgHeight / 4 + index * lineHeight}" dy=".35em" class="stroke-text">${line}</text>
+    `).join('');
 
     // Inject HTML and CSS into shadow DOM
     this.shadowRoot.innerHTML = `
@@ -66,21 +88,27 @@ class StrokeText extends HTMLElement {
           fill: none;
           stroke: ${strokeColor};
           stroke-width: 4px;
-          stroke-dasharray: ${pathLength}px;
-          stroke-dashoffset: ${pathLength}px;
           animation: stroke-draw 5s ease forwards;
         }
 
         @keyframes stroke-draw {
-          0% { stroke-dashoffset: ${pathLength}px; }
-          80% { stroke-dashoffset: 0px; }
-          100% { stroke-dashoffset: 0px; }
+          0% { stroke-dashoffset: 100%; }
+          80% { stroke-dashoffset: 0%; }
+          100% { stroke-dashoffset: 0%; }
         }
       </style>
       <svg class="stroke-container" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">
-        <text x="10" y="${svgHeight / 2}" dy=".35em" class="stroke-text">${text}</text>
+        ${textElements}
       </svg>
     `;
+
+    // Dynamically set stroke-dash properties after rendering
+    const textNodes = this.shadowRoot.querySelectorAll('.stroke-text');
+    textNodes.forEach(textNode => {
+      const length = textNode.getComputedTextLength();
+      textNode.style.strokeDasharray = `${length}px`;
+      textNode.style.strokeDashoffset = `${length}px`;
+    });
   }
 }
 
