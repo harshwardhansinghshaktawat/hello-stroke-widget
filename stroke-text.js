@@ -33,7 +33,7 @@ class StrokeText extends HTMLElement {
 
     // Define SVG dimensions
     const svgWidth = 800; // Fixed width for wrapping
-    const svgHeight = parseFloat(fontSize) * 40; // Height to accommodate wrapped lines
+    const svgHeight = parseFloat(fontSize) * 40; // Height for wrapped lines
 
     // Split text into lines for wrapping
     const words = text.split(' ');
@@ -44,7 +44,7 @@ class StrokeText extends HTMLElement {
 
     words.forEach(word => {
       const wordWidth = ctx.measureText(word + ' ').width;
-      if (currentWidth + wordWidth > svgWidth - 20) { // 20px padding
+      if (currentWidth + wordWidth > svgWidth - 20) {
         lines.push(currentLine.trim());
         currentLine = word + ' ';
         currentWidth = wordWidth;
@@ -55,10 +55,16 @@ class StrokeText extends HTMLElement {
     });
     if (currentLine) lines.push(currentLine.trim());
 
-    // Generate SVG text elements for each line
-    const textElements = lines.map((line, index) => `
-      <text x="10" y="${svgHeight / 4 + index * lineHeight}" dy=".35em" class="stroke-text">${line}</text>
-    `).join('');
+    // Generate SVG text elements, centered
+    const totalLines = lines.length;
+    const verticalCenter = svgHeight / 2 - ((totalLines - 1) * lineHeight) / 2; // Center vertically
+    const textElements = lines.map((line, index) => {
+      const lineWidth = ctx.measureText(line).width;
+      const xPos = (svgWidth - lineWidth) / 2; // Center horizontally
+      return `
+        <text x="${xPos}" y="${verticalCenter + index * lineHeight}" dy=".35em" class="stroke-text">${line}</text>
+      `;
+    }).join('');
 
     // Inject HTML and CSS into shadow DOM
     this.shadowRoot.innerHTML = `
@@ -87,14 +93,14 @@ class StrokeText extends HTMLElement {
           fill: none;
           stroke: ${strokeColor};
           stroke-width: 4px;
-          stroke-dasharray: 100%;
-          stroke-dashoffset: 100%;
-          animation: stroke-draw 5s ease forwards;
         }
 
         @keyframes stroke-draw {
+          from {
+            stroke-dashoffset: var(--text-length);
+          }
           to {
-            stroke-dashoffset: 0%;
+            stroke-dashoffset: 0px;
           }
         }
       </style>
@@ -103,16 +109,16 @@ class StrokeText extends HTMLElement {
       </svg>
     `;
 
-    // Ensure animation applies correctly after DOM insertion
+    // Apply animation with correct stroke length
     requestAnimationFrame(() => {
       const textNodes = this.shadowRoot.querySelectorAll('.stroke-text');
       textNodes.forEach(textNode => {
-        const length = textNode.getComputedTextLength();
+        const length = textNode.getComputedTextLength() * 1.1; // 10% buffer for font variations
         textNode.style.strokeDasharray = `${length}px`;
         textNode.style.strokeDashoffset = `${length}px`;
-        // Force reflow to restart animation
+        textNode.style.setProperty('--text-length', `${length}px`);
+        // Force reflow and apply animation
         textNode.getBoundingClientRect();
-        textNode.style.animation = 'none';
         textNode.style.animation = 'stroke-draw 5s ease forwards';
       });
     });
